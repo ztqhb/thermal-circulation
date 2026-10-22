@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>热力环流 · 交互式演示</title>
+<style>
+:root{ --bar:rgba(6,12,24,.85); --gold:#f0b840; --cyan:#40c8e0; --text:#e8eef6; --dim:#8fa8c8; --border:rgba(64,200,224,.25); }
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:#05080f;color:var(--text)}
+#app{display:flex;flex-direction:column;height:100vh}
+#topbar{display:flex;align-items:center;gap:14px;padding:8px 20px;background:var(--bar);border-bottom:1px solid var(--border);z-index:5;box-shadow:0 2px 24px rgba(64,200,224,.08)}
+#topbar h1{font-size:25px;color:#fff;white-space:nowrap;text-shadow:0 0 18px rgba(64,200,224,.5)}
+#type-sub{font-size:14px;color:var(--cyan);white-space:nowrap}
+.tb-tabs{display:flex;gap:8px;flex:1;justify-content:center;flex-wrap:wrap}
+.tab{padding:8px 18px;border-radius:20px;border:1px solid rgba(64,200,224,.25);background:rgba(64,200,224,.04);color:var(--dim);font-size:16px;cursor:pointer;font-family:inherit;transition:all .2s;white-space:nowrap}
+.tab:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 14px rgba(64,200,224,.2)}
+.tab.active{background:rgba(64,200,224,.16);border-color:var(--cyan);color:#7fe8f8;font-weight:700;box-shadow:0 0 20px rgba(64,200,224,.35)}
+.tb-actions{display:flex;gap:8px}
+.abtn{padding:8px 16px;border-radius:20px;border:1px solid rgba(64,200,224,.3);background:rgba(64,200,224,.08);color:#7fd8f0;font-size:15px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .2s}
+.abtn:hover{border-color:var(--cyan);box-shadow:0 0 14px rgba(64,200,224,.25)}
+.abtn.gold{border-color:rgba(240,184,64,.35);background:rgba(240,184,64,.08);color:#f0c860}
+.abtn.gold:hover{border-color:var(--gold);box-shadow:0 0 14px rgba(240,184,64,.3)}
+.abtn.running{background:rgba(64,200,224,.28);color:#fff}
+#stage{flex:1;position:relative;min-height:0;background:#05080f}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#tipcard{position:absolute;top:16px;right:16px;width:min(380px,30vw);background:rgba(8,16,30,.92);border:1px solid var(--border);border-radius:12px;padding:14px 18px;color:#c8d8ec;box-shadow:0 8px 30px rgba(0,0,0,.5),0 0 20px rgba(64,200,224,.1);backdrop-filter:blur(8px);z-index:4}
+#tipcard h3{font-size:21px;margin-bottom:6px}
+#tipcard p{font-size:15px;line-height:1.55;color:#9fb6d0}
+#tipcard .tag{display:inline-block;margin-top:8px;padding:3px 12px;border-radius:12px;background:rgba(64,200,224,.15);color:#7fd8f0;font-size:13px;font-weight:700;border:1px solid rgba(64,200,224,.3)}
+#stepbar{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--bar);border-top:1px solid var(--border);z-index:5}
+#steps{display:flex;gap:10px;flex:1;justify-content:center;overflow-x:auto}
+.sbtn{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 14px;border-radius:12px;border:1px solid rgba(64,200,224,.15);background:transparent;color:var(--dim);font-size:15px;cursor:pointer;font-family:inherit;transition:all .2s}
+.sbtn b{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:rgba(64,200,224,.06);border:1px solid rgba(64,200,224,.25);font-size:18px}
+.sbtn:hover{border-color:var(--cyan)}
+.sbtn.done b{background:#2f7fd4;border-color:#2f7fd4;color:#fff}
+.sbtn.active{border-color:var(--cyan);color:#7fe8f8;font-weight:700}
+.sbtn.active b{background:var(--cyan);border-color:var(--cyan);color:#051018;box-shadow:0 0 16px rgba(64,200,224,.7)}
+.navbtn{flex:0 0 auto;padding:10px 22px;border-radius:24px;border:none;background:var(--cyan);color:#051018;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 0 16px rgba(64,200,224,.4)}
+.navbtn.ghost{background:rgba(64,200,224,.06);color:var(--dim);border:1px solid rgba(64,200,224,.25);box-shadow:none}
+.navbtn:disabled{opacity:.35;cursor:default;box-shadow:none}
+#quiz{position:fixed;inset:0;background:rgba(3,6,14,.96);z-index:20;display:flex;align-items:center;justify-content:center}
+#quiz.hidden{display:none}
+#quiz-card{width:min(720px,92vw);background:#0c1626;border:1px solid var(--border);border-radius:16px;padding:28px 32px;color:#d8e4f0;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 30px rgba(64,200,224,.12)}
+#quiz-card h2{font-size:22px;color:#7fd8f0;margin-bottom:4px}
+#quiz-prog{font-size:14px;color:#7a9ab8;margin-bottom:16px}
+#quiz-q{font-size:20px;font-weight:700;margin-bottom:18px;line-height:1.5}
+.qopt{display:block;width:100%;text-align:left;padding:13px 16px;margin-bottom:10px;border-radius:10px;border:1px solid rgba(64,200,224,.2);background:rgba(64,200,224,.04);font-size:17px;color:#c8d8ec;cursor:pointer;font-family:inherit;transition:all .15s}
+.qopt:hover{border-color:var(--cyan);background:rgba(64,200,224,.1)}
+.qopt.correct{border-color:#2ee08a;background:rgba(46,224,138,.12);color:#7ff0b0}
+.qopt.wrong{border-color:#e05050;background:rgba(224,80,80,.12);color:#f0a0a0}
+.qopt:disabled{cursor:default}
+#quiz-why{margin-top:14px;padding:12px 16px;border-radius:10px;background:rgba(64,200,224,.08);font-size:15px;line-height:1.6;display:none;color:#9fc0e0}
+#quiz-why.show{display:block}
+#quiz-foot{display:flex;justify-content:space-between;align-items:center;margin-top:20px}
+#quiz-score{font-size:16px;color:#7fd8f0;font-weight:700}
+.qbtn{padding:10px 24px;border-radius:22px;border:1px solid rgba(64,200,224,.3);background:rgba(64,200,224,.1);color:#7fd8f0;font-size:16px;cursor:pointer;font-family:inherit}
+.qbtn.ghost{background:rgba(255,255,255,.04);color:#8fa8c8;border-color:rgba(255,255,255,.12)}
+.qbtn.gold{background:rgba(240,184,64,.15);border-color:var(--gold);color:#f0c860;font-weight:700}
+@media (max-width:900px){
+  #topbar h1{font-size:20px} .tab{font-size:14px;padding:6px 12px} .abtn{font-size:14px;padding:6px 12px}
+  #tipcard{width:min(300px,42vw)} #tipcard h3{font-size:17px} #tipcard p{font-size:13px}
+  .sbtn{font-size:13px;padding:4px 8px} .sbtn b{width:30px;height:30px;font-size:15px}
+  .navbtn{padding:8px 14px;font-size:15px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <button class="abtn gold" id="btn-back" title="返回平台首页">🏠 返回</button>
+    <h1>🔥 热力环流</h1>
+    <span id="type-sub"></span>
+    <div class="tb-tabs" id="tabs">
+      <button class="tab active" data-mode="even">受热均匀</button>
+      <button class="tab" data-mode="uneven">受热不均</button>
+      <button class="tab" data-mode="cases">案例展示</button>
+      <button class="tab" data-mode="quiz">随堂测验</button>
+    </div>
+    <div class="tb-actions">
+      <button class="abtn" id="btn-auto">▶ 自动演示</button>
+      <button class="abtn" id="btn-reset">↺ 重置</button>
+    </div>
+  </div>
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="tipcard"><h3 id="tip-title"></h3><div id="tip-lines"></div><span class="tag" id="tip-tag"></span></div>
+  </div>
+  <div id="stepbar">
+    <button class="navbtn ghost" id="btn-prev">‹ 上一步</button>
+    <div id="steps"></div>
+    <button class="navbtn" id="btn-next">下一步 ›</button>
+  </div>
+</div>
+<div id="quiz" class="hidden">
+  <div id="quiz-card">
+    <h2>✎ 热力环流随堂测验</h2>
+    <div id="quiz-prog"></div>
+    <div id="quiz-q"></div>
+    <div id="quiz-opts"></div>
+    <div id="quiz-why"></div>
+    <div id="quiz-foot">
+      <span id="quiz-score"></span>
+      <div style="display:flex;gap:10px">
+        <button class="qbtn ghost" id="quiz-exit">退出</button>
+        <button class="qbtn gold" id="quiz-next">下一题 ›</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+'use strict';
+/* ═══ 热力环流 · 交互式演示（科技感主题）═══
+   模式：受热均匀 / 受热不均（分步环流）/ 案例展示（海陆风·山谷风·城郊风）/ 随堂测验
+   海陆风底图：真实海岸照片（Pexels #33554538） */
+
+const MODES = [
+  { id: 'even',   name: '受热均匀', sub: '等压面平行 · 无环流',
+    steps: ['even-flat'],
+    terminal: { title: '🔥 受热均匀', lines: ['地面受热均匀，空气无相对升降运动，等压面与地面平行。'], tag: '无气压差 · 无环流' } },
+  { id: 'uneven', name: '受热不均', sub: '受热不均 → 垂直运动 → 气压差异 → 水平运动',
+    steps: ['heat-diff', 'vertical', 'pressure', 'horizontal'],
+    terminal: { title: '🔄 完整热力环流', lines: ['受热不均→空气垂直运动→同一水平面气压差异→空气水平运动，形成闭合环流。'], tag: '热力环流是大气运动最基本的形式' } },
+  { id: 'cases',  name: '案例展示', sub: '海陆风：白天海风 · 夜晚陆风',
+    steps: ['sea-day', 'sea-night'],
+    terminal: { title: '🌊 海陆风总结', lines: ['海陆风是热力环流在沿海地区的具体表现：白天吹海风，夜晚吹陆风。'], tag: '生活中的热力环流' } },
+  { id: 'quiz',   name: '随堂测验', sub: '8 道选择题 · 即时反馈', steps: [], terminal: null },
+];
+const STEPS = {
+  'even-flat':    { name: '等压面平行', color: '#40c8e0', title: '🔥 地面受热均匀',
+    lines: ['地面受热均匀时，空气无相对升降运动，等压面与地面平行。'],
+    tag: '无气压差异' },
+  'heat-diff':    { name: '受热不均', color: '#ff6a40', title: '① 地面受热不均',
+    lines: ['A 地受热、B 地冷却，两地近地面产生温差。'],
+    tag: '环流的根本原因' },
+  'vertical':     { name: '垂直运动', color: '#ff9060', title: '② 空气垂直运动',
+    lines: ['A 地空气受热膨胀上升，B 地空气冷却收缩下沉。'],
+    tag: '热上升 · 冷下沉' },
+  'pressure':     { name: '气压差异', color: '#f0b840', title: '③ 气压差异',
+    lines: ['A 地高空形成高压、近地面形成低压；B 地相反。等压面发生弯曲。'],
+    tag: '高空气压与近地面相反' },
+  'horizontal':   { name: '水平运动', color: '#4fe0a0', title: '④ 空气水平运动',
+    lines: ['高空空气从 A 流向 B，近地面空气从 B 流向 A，形成闭合环流。'],
+    tag: '高压流向低压' },
+  'sea-day':      { name: '海风（白天）', color: '#40c8e0', title: '🌊 白天海风',
+    lines: ['白天陆地升温快、海洋升温慢：陆地空气上升，海洋空气下沉，近地面风从海洋吹向陆地。'],
+    tag: '风从海洋吹向陆地' },
+  'sea-night':    { name: '陆风（夜晚）', color: '#5a7ae0', title: '🌙 夜晚陆风',
+    lines: ['夜晚陆地降温快、海洋降温慢：海洋空气上升，陆地空气下沉，近地面风从陆地吹向海洋。'],
+    tag: '风从陆地吹向海洋' },
+};
+
+/* ───────── 状态 ───────── */
+const WC = {
+  mode: 'even', pos: 1, auto: false, autoTimer: null, autoMs: 4000, quizOpen: false,
+  get steps() { return (MODES.find(m => m.id === this.mode) || {}).steps || []; },
+  get activeId() { return this.pos <= this.steps.length ? this.steps[this.pos - 1] : null; },
+  get isFull() { return this.pos > this.steps.length; },
+  debug: { particleCount: () => P.list.length, state: () => ({ mode: WC.mode, pos: WC.pos, auto: WC.auto }) },
+};
+window.WC = WC;
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function next() { WC.pos = clamp(WC.pos + 1, 1, WC.steps.length + 1); syncUI(); }
+function prev() { WC.pos = clamp(WC.pos - 1, 1, WC.steps.length + 1); syncUI(); }
+function goto(n) { if (!Number.isFinite(n)) return; WC.pos = clamp(Math.trunc(n), 1, WC.steps.length + 1); syncUI(); }
+const MODE_ORDER = ['even', 'uneven', 'cases'];
+function cycleMode() { WC.mode = MODE_ORDER[(MODE_ORDER.indexOf(WC.mode) + 1) % MODE_ORDER.length]; WC.pos = 1; syncUI(); }
+function resetAll() { if (WC.auto) toggleAuto(); WC.mode = 'even'; WC.pos = 1; syncUI(); }
+WC.next = next; WC.prev = prev; WC.goto = goto; WC.cycleMode = cycleMode; WC.resetAll = resetAll;
+WC.toggleAuto = toggleAuto; WC.openQuiz = openQuiz; WC.closeQuiz = closeQuiz;
+
+/* ───────── 画布 ───────── */
+const W = 1920, H = 1080, GROUND = 760;
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const stage = document.getElementById('stage');
+let cw = 0, ch = 0, sx = 1, ox = 0, oy = 0, dpr = 1;
+function resize() {
+  const r = stage.getBoundingClientRect();
+  cw = Math.max(r.width || 800, 300); ch = Math.max(r.height || 400, 200);
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = cw * dpr; cv.height = ch * dpr;
+  cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  sx = Math.min(cw / W, ch / H); ox = (cw - W * sx) / 2; oy = (ch - H * sx) / 2;
+}
+const seaPhoto = new Image();
+seaPhoto.src = 'img/water-cycle-photo.jpg';   // 海岸航拍：海洋在左、陆地在右（构图匹配海陆风）
+let lastTs = 0, tm = 0;
+function loop(ts) {
+  const dt = lastTs ? Math.min((ts - lastTs) / 1000, .1) : .016; lastTs = ts; tm += dt;
+  ctx.setTransform(cv.width / cw, 0, 0, cv.height / ch, 0, 0);
+  ctx.clearRect(0, 0, cw, ch);
+  ctx.setTransform(sx * dpr, 0, 0, sx * dpr, ox * dpr, oy * dpr);
+  drawScene();
+  P.update(dt); P.draw();
+  requestAnimationFrame(loop);
+}
+
+/* ───────── 通用绘制（霓虹发光风格） ───────── */
+function label(t, x, y, color, size) {
+  ctx.font = 'bold ' + (size || 34) + 'px "Microsoft YaHei","PingFang SC",sans-serif';
+  ctx.textAlign = 'center'; ctx.lineJoin = 'round';
+  ctx.shadowColor = color; ctx.shadowBlur = 14;
+  ctx.fillStyle = color;
+  ctx.fillText(t, x, y);
+  ctx.shadowBlur = 0;
+}
+function arrowPath(pts, color, alpha) {
+  ctx.globalAlpha = alpha || 1;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 12;
+  ctx.shadowColor = color; ctx.shadowBlur = 16;
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  if (pts.length === 2) ctx.lineTo(pts[1][0], pts[1][1]);
+  else for (let i = 1; i < pts.length - 1; i++) {
+    const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
+    ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+  }
+  ctx.stroke();
+  ctx.strokeStyle = color; ctx.lineWidth = 6;
+  ctx.stroke();
+  // 粒子流动态效果：沿箭头方向流动的亮色虚线
+  ctx.setLineDash([26, 30]);
+  ctx.lineDashOffset = -tm * 140;
+  ctx.strokeStyle = 'rgba(255,255,255,.95)';
+  ctx.lineWidth = 3.5;
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.shadowBlur = 0;
+  const l = pts[pts.length - 1], p = pts[pts.length - 2];
+  const ang = Math.atan2(l[1] - p[1], l[0] - p[0]), hs = 26;
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.moveTo(l[0], l[1]);
+  ctx.lineTo(l[0] - hs * Math.cos(ang - .45), l[1] - hs * Math.sin(ang - .45));
+  ctx.lineTo(l[0] - hs * Math.cos(ang + .45), l[1] - hs * Math.sin(ang + .45));
+  ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+function glowRect(x, y, w, h, color, alpha) {
+  ctx.fillStyle = color;
+  ctx.shadowColor = color; ctx.shadowBlur = 30;
+  ctx.globalAlpha = alpha === undefined ? 1 : alpha;
+  ctx.fillRect(x, y, w, h);
+  ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+}
+
+/* ───────── 粒子 ───────── */
+const P = { list: [], paths: [] };
+function activePaths() {
+  if (WC.mode === 'uneven') {
+    const id = WC.activeId;
+    if (WC.isFull) return [[[600, 690], [600, 330]], [[600, 330], [1280, 330]], [[1280, 400], [1280, 690]], [[1280, 700], [600, 700]]];
+    if (id === 'vertical') return [[[600, 690], [600, 330]], [[1280, 400], [1280, 690]]];
+    if (id === 'horizontal') return [[[600, 330], [1280, 330]], [[1280, 700], [600, 700]]];
+    return [];
+  }
+  if (WC.mode === 'cases') {
+    const p = {
+      'sea-day':      [[[400, 690], [1300, 700]], [[1350, 690], [1350, 420]], [[1350, 420], [400, 450]], [[350, 450], [350, 680]]],
+      'sea-night':    [[[1300, 700], [400, 690]], [[350, 680], [350, 450]], [[400, 450], [1350, 420]], [[1350, 420], [1350, 690]]],
+      'valley-day':   [[[400, 640], [900, 300]], [[900, 300], [1400, 640]], [[1400, 640], [960, 700]], [[960, 700], [400, 640]]],
+      'valley-night': [[[420, 300], [960, 640]], [[960, 640], [1500, 300]], [[960, 700], [420, 640]], [[1500, 640], [960, 700]]],
+      'city':         [[[960, 500], [600, 600]], [[600, 600], [960, 640]], [[960, 640], [1400, 600]], [[1400, 600], [960, 500]]],
+    }[WC.activeId];
+    return p ? [p] : [];
+  }
+  return [];
+}
+P.spawn = function() {
+  const paths = activePaths();
+  if (!paths.length) return;
+  const pts = paths[Math.floor(Math.random() * paths.length)];
+  this.list.push({ pts, seg: 0, t: Math.random(), sp: .14 + Math.random() * .2, sz: 2.5 + Math.random() * 3, al: .5 + Math.random() * .3 });
+};
+P.update = function(dt) {
+  const target = activePaths().length ? (WC.isFull ? 80 : 50) : 0;
+  if (target && this.list.length < target && Math.random() < .5) this.spawn();
+  while (this.list.length > target + 20) this.list.shift();
+  if (!target && this.list.length) this.list.length = 0;
+  for (let i = this.list.length - 1; i >= 0; i--) {
+    const p = this.list[i];
+    if (!p.pts || p.seg >= p.pts.length - 1) { this.list.splice(i, 1); continue; }
+    p.t += p.sp * dt;
+    if (p.t >= 1) { p.t = 0; p.seg++; if (p.seg >= p.pts.length - 1) { this.list.splice(i, 1); continue; } }
+  }
+};
+P.draw = function() {
+  this.list.forEach(p => {
+    const a = p.pts[p.seg], b = p.pts[p.seg + 1];
+    if (!a || !b) return;                       // 防御：段索引越界
+    const x = a[0] + (b[0] - a[0]) * p.t, y = a[1] + (b[1] - a[1]) * p.t;
+    if (!isFinite(x) || !isFinite(y) || !isFinite(p.sz)) return;   // 防御：非有限值跳过，避免动画循环崩溃
+    const g = ctx.createRadialGradient(x, y, 1, x, y, p.sz * 3);
+    g.addColorStop(0, 'rgba(180,240,255,' + p.al + ')'); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, p.sz * 3, 0, Math.PI * 2); ctx.fill();
+  });
+};
+
+/* ───────── 等压面粒子（沿弯曲等压线流动） ───────── */
+const ISO_LINES = [
+  [[120, 300], [420, 272], [620, 272], [850, 300], [1100, 328], [1480, 332], [1800, 300]],
+  [[120, 620], [420, 648], [620, 648], [850, 620], [1100, 592], [1480, 588], [1800, 620]],
+];
+function sampleIso(line, n) {
+  const out = [[line[0][0], line[0][1]]];
+  for (let i = 1; i < line.length; i++) {
+    const p0 = [out[out.length - 1][0], out[out.length - 1][1]];
+    const c = line[i - 1];
+    const p1 = [(line[i - 1][0] + line[i][0]) / 2, (line[i - 1][1] + line[i][1]) / 2];
+    for (let k = 1; k <= n; k++) {
+      const t = k / n;
+      out.push([
+        (1 - t) * (1 - t) * p0[0] + 2 * (1 - t) * t * c[0] + t * t * p1[0],
+        (1 - t) * (1 - t) * p0[1] + 2 * (1 - t) * t * c[1] + t * t * p1[1],
+      ]);
+    }
+  }
+  out.push([line[line.length - 1][0], line[line.length - 1][1]]);
+  return out;
+}
+const IP = {
+  list: [],
+  paths: ISO_LINES.map(l => sampleIso(l, 8)),
+  spawn() {
+    const pts = this.paths[Math.floor(Math.random() * this.paths.length)];
+    this.list.push({ pts, seg: 0, t: Math.random(), sp: .1 + Math.random() * .12, sz: 2 + Math.random() * 2.5 });
+  },
+  update() {
+    const target = 60;
+    if (this.list.length < target && Math.random() < .6) this.spawn();
+    while (this.list.length > target + 15) this.list.shift();
+    for (let i = this.list.length - 1; i >= 0; i--) {
+      const p = this.list[i];
+      p.t += p.sp;
+      while (p.t >= 1) {
+        p.t -= 1; p.seg++;
+        if (p.seg >= p.pts.length - 1) { this.list.splice(i, 1); break; }
+      }
+    }
+  },
+  draw() {
+    // 气流运动效果：沿等压线方向流动的拖尾光痕（streamline）
+    this.list.forEach(p => {
+      const a = p.pts[p.seg], b = p.pts[p.seg + 1];
+      if (!a || !b) return;
+      const x = a[0] + (b[0] - a[0]) * p.t, y = a[1] + (b[1] - a[1]) * p.t;
+      const dx = b[0] - a[0], dy = b[1] - a[1];
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len, uy = dy / len;
+      const tail = 8 + p.sz * 2.2;
+      const g = ctx.createLinearGradient(x, y, x - ux * tail, y - uy * tail);
+      g.addColorStop(0, 'rgba(170,240,255,.95)');
+      g.addColorStop(1, 'rgba(170,240,255,0)');
+      ctx.strokeStyle = g;
+      ctx.lineWidth = 1.8 + p.sz * .4;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - ux * tail, y - uy * tail); ctx.stroke();
+    });
+  },
+};
+
+/* ───────── 场景 ───────── */
+function drawScene() {
+  // 深空背景 + 网格
+  const sky = ctx.createLinearGradient(0, 0, 0, GROUND);
+  sky.addColorStop(0, '#04070f'); sky.addColorStop(1, '#0a1424');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, GROUND);
+  ctx.strokeStyle = 'rgba(64,200,224,.05)'; ctx.lineWidth = 1;
+  for (let gx = 0; gx <= W; gx += 120) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, GROUND); ctx.stroke(); }
+  for (let gy = 0; gy <= GROUND; gy += 120) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
+
+  if (WC.mode === 'even') drawEven();
+  else if (WC.mode === 'uneven') drawUneven();
+  else if (WC.mode === 'cases') drawCase();
+}
+
+function drawEven() {
+  glowRect(0, GROUND, W, H - GROUND, '#16202e', 1);
+  glowRect(0, GROUND, W, 6, '#40c8e0', .8);
+  ctx.setLineDash([14, 12]);
+  const vals = [1000, 1005, 1010];   // 自高向低：气压随高度升高而降低
+  for (let i = 0; i < 3; i++) {
+    const y = 320 + i * 140;
+    ctx.strokeStyle = 'rgba(64,200,224,.65)'; ctx.lineWidth = 3;
+    ctx.shadowColor = '#40c8e0'; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.moveTo(120, y); ctx.lineTo(W - 120, y); ctx.stroke();
+    ctx.shadowBlur = 0;
+    label('等压面 ' + vals[i] + ' hPa', 260, y - 16, '#40c8e0', 26);
+  }
+  ctx.setLineDash([]);
+  // 空气分子：均匀分布在等压面之间（受热均匀，无相对运动，仅轻微闪烁）
+  for (let row = 0; row < 4; row++) {
+    const y = 250 + row * 130;
+    for (let x = 140; x < W - 100; x += 105) {
+      const jx = ((x * 37 + row * 91) % 70) - 35;   // 确定性伪随机偏移
+      const jy = ((x * 53 + row * 61) % 30) - 15;
+      const tw = .35 + .25 * Math.sin(tm * .9 + x * .01 + row);
+      const g = ctx.createRadialGradient(x + jx, y + jy, 1, x + jx, y + jy, 7);
+      g.addColorStop(0, 'rgba(170,225,255,' + tw.toFixed(2) + ')');
+      g.addColorStop(1, 'rgba(170,225,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x + jx, y + jy, 7, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  label('地面受热均匀', 960, 900, '#9fc0e0', 40);
+  label('空气无垂直运动 · 等压面与地面平行', 960, 960, 'rgba(160,200,240,.75)', 30);
+}
+
+function drawUneven() {
+  const shown = WC.isFull ? WC.steps : WC.steps.slice(0, WC.pos);
+  glowRect(0, GROUND, W, H - GROUND, '#16202e', 1);   // 地面（中性色，去除红蓝色块）
+  glowRect(0, GROUND, W, 6, '#40c8e0', .6);
+  label('A 地 · 受热', 620, 850, '#ff9060', 38);
+  label('B 地 · 冷却', 1480, 850, '#5ab8ff', 38);
+
+  if (shown.includes('heat-diff')) {
+    label('高温', 620, 700, '#ff6a40', 30);
+    label('低温', 1480, 700, '#40a8ff', 30);
+  }
+  if (shown.includes('vertical')) {
+    arrowPath([[600, 690], [600, 330]], '#ff6a40', 1);
+    arrowPath([[1280, 330], [1280, 690]], '#40a8ff', 1);
+    label('上升气流', 480, 500, '#ff9060', 32);
+    label('下沉气流', 1360, 560, '#5ab8ff', 32);
+  }
+  if (shown.includes('pressure')) {
+    // 等压面弯曲：高空 A 上凸（高压）、B 下凹（低压）；近地面镜像
+    // 双层光晕描边 + 沿曲线流动的粒子
+    const drawIso = (pts) => {
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) {
+        const mx = (pts[i - 1][0] + pts[i][0]) / 2, my = (pts[i - 1][1] + pts[i][1]) / 2;
+        ctx.quadraticCurveTo(pts[i - 1][0], pts[i - 1][1], mx, my);
+      }
+      ctx.quadraticCurveTo(pts[pts.length - 1][0], pts[pts.length - 1][1], pts[pts.length - 1][0], pts[pts.length - 1][1]);
+      ctx.strokeStyle = 'rgba(64,200,224,.22)'; ctx.lineWidth = 9;
+      ctx.shadowColor = '#40c8e0'; ctx.shadowBlur = 18;
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(120,225,245,.9)'; ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    };
+    drawIso([[120, 300], [420, 272], [620, 272], [850, 300], [1100, 328], [1480, 332], [1800, 300]]);
+    drawIso([[120, 620], [420, 648], [620, 648], [850, 620], [1100, 592], [1480, 588], [1800, 620]]);
+    IP.update(); IP.draw();
+    label('高空：A 高压 · B 低压', 960, 170, '#f0b840', 32);
+    label('近地面：A 低压 · B 高压', 960, 775, '#f0b840', 32);
+    label('高压', 620, 238, '#f0b840', 28);
+    label('低压', 740, 668, '#40c8e0', 28);
+    label('低压', 1480, 300, '#40c8e0', 28);
+    label('高压', 1200, 668, '#f0b840', 28);
+  }
+  if (shown.includes('horizontal')) {
+    arrowPath([[640, 330], [1260, 330]], '#f0b840', 1);
+    arrowPath([[1280, 700], [660, 700]], '#4fe0a0', 1);
+    label('高空：A → B', 960, 255, '#f0b840', 30);
+    label('近地面：B → A', 960, 728, '#4fe0a0', 30);
+  }
+}
+
+function drawSeaCaseBase(isDay) {
+  // 真实海岸照片铺底（cover 裁切，仅显示——不读取像素）
+  if (seaPhoto.complete && seaPhoto.naturalWidth) {
+    const iw = seaPhoto.naturalWidth, ih = seaPhoto.naturalHeight;
+    const s = Math.max(W / iw, GROUND / ih);
+    const sw = W / s, sh = GROUND / s;
+    ctx.drawImage(seaPhoto, (iw - sw) / 2, (ih - sh) / 2, sw, sh, 0, 0, W, GROUND);
+    ctx.fillStyle = isDay ? 'rgba(255,180,80,.10)' : 'rgba(8,14,40,.55)';
+    ctx.fillRect(0, 0, W, GROUND);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, 0, GROUND);
+    g.addColorStop(0, '#12283e'); g.addColorStop(1, '#0a1828');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, GROUND);
+  }
+  glowRect(0, GROUND, W, H - GROUND, '#101a2a', 1);
+  glowRect(0, GROUND, W, 6, '#40c8e0', .7);
+}
+
+function drawCase() {
+  const id = WC.activeId || (WC.isFull ? 'sea-day' : null);
+  if (!id) return;
+  // 气流箭头始终显示（白色光晕+发光，叠加在场景上）
+  const showVert = true, showHoriz = true;
+  if (id === 'sea-day' || id === 'sea-night') {
+    const isDay = id === 'sea-day';
+    drawSeaCaseBase(isDay);
+    // 构图：海洋在左（x≈250-500），陆地在右（x≈1250-1550）
+    // 白天：陆地热→上升，海洋冷→下沉，近地面风从海洋吹向陆地；夜晚相反
+    if (isDay) {
+      ctx.fillStyle = '#ffe9a0'; ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 40;
+      ctx.beginPath(); ctx.arc(1500, 130, 48, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      label('白天', 960, 110, '#f0b840', 40);
+      if (showVert) {
+        arrowPath([[1350, 690], [1350, 420]], '#ff6a40', 1);  // 陆地：受热上升
+        arrowPath([[350, 450], [350, 680]], '#40a8ff', 1);    // 海洋：冷却下沉
+      }
+      if (showHoriz) {
+        arrowPath([[400, 690], [1300, 700]], '#40c8e0', 1);   // 近地面：海风（海洋→陆地）
+        arrowPath([[1350, 420], [400, 450]], '#f0b840', 1);   // 高空：陆地→海洋
+      }
+    } else {
+      // 月牙（左上角）：亮圆 + 柔边半透明暗面（与压暗后的照片自然融合，无生硬黑圆）
+      ctx.save();
+      ctx.fillStyle = '#f0f4fa'; ctx.shadowColor = '#c0d8ff'; ctx.shadowBlur = 40;
+      ctx.beginPath(); ctx.arc(280, 130, 46, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      const mg = ctx.createRadialGradient(302, 116, 26, 302, 116, 45);
+      mg.addColorStop(0, 'rgba(10,16,40,.94)');
+      mg.addColorStop(.85, 'rgba(10,16,40,.9)');
+      mg.addColorStop(1, 'rgba(10,16,40,0)');
+      ctx.fillStyle = mg;
+      ctx.beginPath(); ctx.arc(302, 116, 45, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      label('夜晚', 960, 110, '#5a7ae0', 40);
+      if (showVert) {
+        arrowPath([[350, 680], [350, 450]], '#ff6a40', 1);    // 海洋：受热上升
+        arrowPath([[1350, 420], [1350, 690]], '#40a8ff', 1);  // 陆地：冷却下沉
+      }
+      if (showHoriz) {
+        arrowPath([[1300, 700], [400, 690]], '#5a7ae0', 1);   // 近地面：陆风（陆地→海洋）
+        arrowPath([[400, 450], [1350, 420]], '#f0b840', 1);   // 高空：海洋→陆地
+      }
+    }
+  }
+}
+
+/* ───────── UI ───────── */
+function buildSteps() {
+  const box = document.getElementById('steps');
+  box.innerHTML = '';
+  WC.steps.forEach((id, i) => {
+    const b = document.createElement('button');
+    b.className = 'sbtn'; b.dataset.n = i + 1;
+    b.innerHTML = '<b>' + (i + 1) + '</b>' + STEPS[id].name;
+    b.addEventListener('click', () => goto(i + 1));
+    box.appendChild(b);
+  });
+}
+let stepEnterTime = 0;
+function syncUI() {
+  P.list.length = 0;
+  IP.list.length = 0;
+  stepEnterTime = performance.now();
+  buildSteps();
+  document.querySelectorAll('#tabs .tab').forEach(t =>
+    t.className = 'tab' + (t.dataset.mode === WC.mode ? ' active' : ''));
+  document.getElementById('type-sub').textContent = (MODES.find(m => m.id === WC.mode) || {}).sub || '';
+  document.querySelectorAll('#steps .sbtn').forEach((b, i) => {
+    const n = i + 1;
+    b.className = 'sbtn' + (n === WC.pos ? ' active' : (n < WC.pos ? ' done' : ''));
+  });
+  document.getElementById('btn-prev').disabled = WC.pos <= 1;
+  document.getElementById('btn-next').disabled = WC.isFull;
+  document.getElementById('btn-next').textContent = WC.isFull ? '循环中 ⟳' : '下一步 ›';
+  const mode = MODES.find(m => m.id === WC.mode);
+  const s = WC.isFull ? mode.terminal : STEPS[WC.activeId];
+  document.getElementById('tip-title').textContent = s.title;
+  document.getElementById('tip-title').style.color = WC.isFull ? '#7fd8f0' : (STEPS[WC.activeId] || mode.terminal).color;
+  document.getElementById('tip-lines').innerHTML = s.lines.map(l => '<p>' + l + '</p>').join('');
+  document.getElementById('tip-tag').textContent = s.tag;
+}
+
+/* ───────── 返回按钮（平台 iframe 内回首页；独立打开时跳转平台） ───────── */
+document.getElementById('btn-back').addEventListener('click', () => {
+  if (window.self !== window.top) {
+    try { window.top.location.hash = ''; }
+    catch (e) { /* 跨源受限：平台侧栏已有返回按钮 */ }
+  } else {
+    location.href = '../index.html';
+  }
+});
+
+/* ───────── 键盘 ───────── */
+document.addEventListener('keydown', e => {
+  if (WC.quizOpen) { if (e.key === 'Escape') closeQuiz(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  switch (e.key) {
+    case ' ': e.preventDefault(); if (WC.auto) toggleAuto(); else next(); break;
+    case 'ArrowRight': next(); break;
+    case 'ArrowLeft': prev(); break;
+    case 'q': case 'Q': cycleMode(); break;
+    case 't': case 'T': openQuiz(); break;
+    case 'Escape': resetAll(); break;
+    default:
+      if (/^[1-9]$/.test(e.key)) goto(parseInt(e.key, 10));
+  }
+});
+
+/* ───────── 控制 ───────── */
+function toggleAuto() {
+  WC.auto = !WC.auto;
+  const b = document.getElementById('btn-auto');
+  if (WC.auto) {
+    b.textContent = '⏸ 暂停'; b.classList.add('running');
+    WC.autoTimer = setInterval(() => {
+      if (WC.isFull) goto(1); else next();
+    }, WC.autoMs);
+  } else {
+    b.textContent = '▶ 自动演示'; b.classList.remove('running');
+    clearInterval(WC.autoTimer); WC.autoTimer = null;
+  }
+}
+document.getElementById('btn-prev').addEventListener('click', prev);
+document.getElementById('btn-next').addEventListener('click', next);
+document.getElementById('btn-reset').addEventListener('click', resetAll);
+document.getElementById('btn-auto').addEventListener('click', toggleAuto);
+document.querySelectorAll('#tabs .tab').forEach(t =>
+  t.addEventListener('click', () => {
+    const m = t.dataset.mode;
+    if (m === 'quiz') { openQuiz(); return; }
+    WC.mode = m; WC.pos = 1; syncUI();
+  }));
+
+/* ───────── 随堂测验 ───────── */
+const QUIZ = [
+  { q: '热力环流形成的根本原因是（　）',
+    opts: ['大气水平运动', '地面冷热不均', '地转偏向力', '气压带风带'],
+    a: 1, why: '地面冷热不均导致空气垂直运动，进而产生气压差异和水平运动，是热力环流的根本原因。' },
+  { q: '受热地区的近地面气压状况是（　）',
+    opts: ['高压', '低压', '与周围相等', '无法判断'],
+    a: 1, why: '受热地区空气膨胀上升，近地面空气减少，形成低压。' },
+  { q: '高空与近地面的气压分布关系是（　）',
+    opts: ['完全相同', '完全相反', '没有关系', '高空一定高于近地面'],
+    a: 1, why: '热力环流中，某地近地面为高压则其高空为低压，反之亦然。' },
+  { q: '等压面在高压处（　）',
+    opts: ['向下凹陷', '向上凸起', '保持水平', '垂直地面'],
+    a: 1, why: '等压面上凸处气压高于同高度周围，即高压；下凹处为低压。' },
+  { q: '白天，沿海地区的风通常从（　）',
+    opts: ['陆地吹向海洋', '海洋吹向陆地', '北方吹向南方', '高空吹向地面'],
+    a: 1, why: '白天陆地升温快形成低压，海洋形成高压，近地面风从海洋吹向陆地，即海风。' },
+  { q: '夜晚，山谷地区的风通常（　）',
+    opts: ['沿山坡向上吹', '沿山坡向下吹', '从山谷吹向山顶', '静止无风'],
+    a: 1, why: '夜晚山坡降温快、山谷降温慢，近地面风沿山坡向下吹，即山风。' },
+  { q: '城市热岛环流中，近地面的风（　）',
+    opts: ['从城市吹向郊区', '从郊区吹向城市', '沿城市边缘旋转', '只在白天出现'],
+    a: 1, why: '城市气温高于郊区，城市空气上升，近地面风从郊区吹向城市。' },
+  { q: '热力环流的形成顺序是（　）',
+    opts: ['水平运动→垂直运动→受热不均', '受热不均→垂直运动→气压差异→水平运动', '气压差异→受热不均→垂直运动', '垂直运动→水平运动→受热不均'],
+    a: 1, why: '受热不均引起垂直运动，造成同一水平面气压差异，进而产生水平运动，形成环流。' },
+];
+const quiz = { i: 0, score: 0, answered: false };
+const $ = id => document.getElementById(id);
+function openQuiz() {
+  if (WC.auto) toggleAuto();
+  WC.quizOpen = true;
+  quiz.i = 0; quiz.score = 0;
+  $('quiz').classList.remove('hidden');
+  renderQuiz();
+}
+function closeQuiz() { WC.quizOpen = false; $('quiz').classList.add('hidden'); }
+function renderQuiz() {
+  const item = QUIZ[quiz.i];
+  quiz.answered = false;
+  $('quiz-prog').textContent = '第 ' + (quiz.i + 1) + '/' + QUIZ.length + ' 题';
+  $('quiz-q').textContent = (quiz.i + 1) + '. ' + item.q;
+  $('quiz-opts').innerHTML = item.opts.map((o, k) =>
+    '<button class="qopt" data-k="' + k + '">' + String.fromCharCode(65 + k) + '. ' + o + '</button>').join('');
+  $('quiz-why').className = '';
+  $('quiz-why').textContent = '';
+  $('quiz-score').textContent = '得分：' + quiz.score;
+  const nb = $('quiz-next');
+  nb.textContent = quiz.i === QUIZ.length - 1 ? '查看结果' : '下一题 ›';
+  nb.style.display = 'none';
+  $('quiz-opts').querySelectorAll('.qopt').forEach(b =>
+    b.addEventListener('click', () => answerQuiz(parseInt(b.dataset.k, 10))));
+  $('quiz-exit').style.display = 'inline-block';
+  $('quiz-restart') && $('quiz-restart').remove();
+}
+function answerQuiz(k) {
+  if (quiz.answered) return;
+  quiz.answered = true;
+  const item = QUIZ[quiz.i];
+  const opts = $('quiz-opts').querySelectorAll('.qopt');
+  opts.forEach(b => b.disabled = true);
+  if (k === item.a) { quiz.score++; opts[k].classList.add('correct'); }
+  else { opts[k].classList.add('wrong'); opts[item.a].classList.add('correct'); }
+  $('quiz-score').textContent = '得分：' + quiz.score;
+  $('quiz-why').textContent = '解析：' + item.why;
+  $('quiz-why').classList.add('show');
+  $('quiz-next').style.display = 'inline-block';
+}
+function nextQuiz() {
+  quiz.i++;
+  if (quiz.i >= QUIZ.length) return showQuizResult();
+  renderQuiz();
+}
+function showQuizResult() {
+  $('quiz-prog').textContent = '';
+  $('quiz-q').textContent = '测验完成！';
+  $('quiz-opts').innerHTML = '<p style="font-size:19px;line-height:1.6">' +
+    '共 ' + QUIZ.length + ' 题，答对 ' + quiz.score + ' 题' +
+    (quiz.score >= 6 ? '，掌握得很好！🔥' : '，再回顾一下环流过程吧。💪') + '</p>';
+  $('quiz-why').className = '';
+  $('quiz-score').textContent = '得分：' + quiz.score + ' / ' + QUIZ.length;
+  $('quiz-next').style.display = 'none';
+  $('quiz-exit').style.display = 'none';
+  const rb = document.createElement('button');
+  rb.className = 'qbtn gold'; rb.id = 'quiz-restart'; rb.textContent = '↺ 重新测验';
+  rb.addEventListener('click', () => { quiz.i = 0; quiz.score = 0; renderQuiz(); });
+  $('quiz-foot').querySelector('div').appendChild(rb);
+}
+document.getElementById('quiz-next').addEventListener('click', nextQuiz);
+document.getElementById('quiz-exit').addEventListener('click', closeQuiz);
+
+/* ───────── 初始化 ───────── */
+syncUI();
+window.addEventListener('resize', resize);
+resize();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
