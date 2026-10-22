@@ -63,12 +63,23 @@ html,body{height:100%;overflow:hidden;font-family:"Microsoft YaHei","PingFang SC
   .sbtn{font-size:13px;padding:4px 8px} .sbtn b{width:30px;height:30px;font-size:15px}
   .navbtn{padding:8px 14px;font-size:15px}
 }
+@media (max-width:560px){
+  #topbar{flex-wrap:wrap;gap:6px;padding:8px 10px}
+  #topbar h1{font-size:17px}
+  #type-sub{display:none}
+  .tb-tabs{order:3;flex-basis:100%;overflow-x:auto;justify-content:flex-start;gap:6px;padding-bottom:2px}
+  .tab{padding:6px 10px;font-size:13px;flex:0 0 auto}
+  .tb-actions{margin-left:auto}
+  .abtn{padding:6px 10px;font-size:13px}
+  #tipcard{width:min(250px,64vw)}
+  .sbtn{font-size:12px;padding:3px 6px}
+  .navbtn{padding:6px 10px;font-size:14px}
+}
 </style>
 </head>
 <body>
 <div id="app">
   <div id="topbar">
-    <button class="abtn gold" id="btn-back" title="返回平台首页">🏠 返回</button>
     <h1>🔥 热力环流</h1>
     <span id="type-sub"></span>
     <div class="tb-tabs" id="tabs">
@@ -563,15 +574,6 @@ function syncUI() {
   document.getElementById('tip-tag').textContent = s.tag;
 }
 
-/* ───────── 返回按钮（平台 iframe 内回首页；独立打开时跳转平台） ───────── */
-document.getElementById('btn-back').addEventListener('click', () => {
-  if (window.self !== window.top) {
-    try { window.top.location.hash = ''; }
-    catch (e) { /* 跨源受限：平台侧栏已有返回按钮 */ }
-  } else {
-    location.href = '../index.html';
-  }
-});
 
 /* ───────── 键盘 ───────── */
 document.addEventListener('keydown', e => {
